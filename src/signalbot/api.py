@@ -10,6 +10,8 @@ import websockets
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
+    from signalbot.auth import Authentication
+
 
 class ConnectionMode(str, Enum):
     """Protocol strategy for connecting to `signal-cli-rest-api`.
@@ -33,10 +35,12 @@ class SignalAPI:
         self,
         signal_service: str,
         phone_number: str,
+        auth: Authentication | None = None,
         download_attachments: bool = True,  # noqa: FBT001, FBT002
         connection_mode: ConnectionMode = ConnectionMode.AUTO,
     ):
         self.phone_number = phone_number
+        self.auth = auth
         self.connection_mode = connection_mode
         use_https = connection_mode in (ConnectionMode.HTTPS_ONLY, ConnectionMode.AUTO)
         self._signal_api_uris = SignalAPIURIs(
@@ -47,9 +51,13 @@ class SignalAPI:
         self.download_attachments = download_attachments
 
     async def receive(self) -> AsyncIterator[str]:
+        headers = self._add_auth()
+
         try:
             uri = self._signal_api_uris.receive_ws_uri()
-            self.connection = websockets.connect(uri, ping_interval=None)
+            self.connection = websockets.connect(
+                uri, ping_interval=None, additional_headers=headers
+            )
             async with self.connection as websocket:
                 async for raw_message in websocket:
                     yield raw_message
@@ -83,6 +91,7 @@ class SignalAPI:
             "number": self.phone_number,
             "recipients": [receiver],
         }
+        headers = self._add_auth()
 
         if quote_author:
             payload["quote_author"] = quote_author
@@ -104,7 +113,7 @@ class SignalAPI:
             payload["view_once"] = True
 
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(headers=headers) as session:
                 resp = await session.post(uri, json=payload)
                 resp.raise_for_status()
                 return resp
@@ -130,9 +139,10 @@ class SignalAPI:
             "answers": answers,
             "allow_multiple_selections": allow_multiple_selections,
         }
+        headers = self._add_auth()
 
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(headers=headers) as session:
                 resp = await session.post(uri, json=payload)
                 resp.raise_for_status()
                 return resp
@@ -157,8 +167,10 @@ class SignalAPI:
             "target_author": target_author,
             "timestamp": timestamp,
         }
+        headers = self._add_auth()
+
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(headers=headers) as session:
                 resp = await session.post(uri, json=payload)
                 resp.raise_for_status()
                 return resp
@@ -180,8 +192,10 @@ class SignalAPI:
             "receipt_type": receipt_type,
             "timestamp": timestamp,
         }
+        headers = self._add_auth()
+
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(headers=headers) as session:
                 resp = await session.post(uri, json=payload)
                 resp.raise_for_status()
                 return resp
@@ -196,8 +210,10 @@ class SignalAPI:
         payload = {
             "recipient": receiver,
         }
+        headers = self._add_auth()
+
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(headers=headers) as session:
                 resp = await session.put(uri, json=payload)
                 resp.raise_for_status()
                 return resp
@@ -212,8 +228,10 @@ class SignalAPI:
         payload = {
             "recipient": receiver,
         }
+        headers = self._add_auth()
+
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(headers=headers) as session:
                 resp = await session.delete(uri, json=payload)
                 resp.raise_for_status()
                 return resp
@@ -225,8 +243,10 @@ class SignalAPI:
 
     async def get_groups(self) -> list[dict[str, Any]]:
         uri = self._signal_api_uris.groups_uri()
+        headers = self._add_auth()
+
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(headers=headers) as session:
                 resp = await session.get(uri)
                 resp.raise_for_status()
                 return await resp.json()
@@ -238,8 +258,10 @@ class SignalAPI:
 
     async def get_group(self, group_id: str) -> dict[str, Any]:
         uri = self._signal_api_uris.group_id_uri(group_id)
+        headers = self._add_auth()
+
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(headers=headers) as session:
                 resp = await session.get(uri)
                 resp.raise_for_status()
                 return await resp.json()
@@ -251,8 +273,10 @@ class SignalAPI:
 
     async def get_attachment(self, attachment_id: str) -> str:
         uri = f"{self._signal_api_uris.attachment_rest_uri()}/{attachment_id}"
+        headers = self._add_auth()
+
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(headers=headers) as session:
                 resp = await session.get(uri)
                 resp.raise_for_status()
                 content = await resp.content.read()
@@ -269,8 +293,10 @@ class SignalAPI:
 
     async def delete_attachment(self, attachment_id: str) -> str:
         uri = f"{self._signal_api_uris.attachment_rest_uri()}/{attachment_id}"
+        headers = self._add_auth()
+
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(headers=headers) as session:
                 resp = await session.delete(uri)
                 resp.raise_for_status()
                 return resp
@@ -288,6 +314,7 @@ class SignalAPI:
     ) -> None:
         uri = self._signal_api_uris.contacts_uri()
         payload = {"recipient": receiver}
+        headers = self._add_auth()
 
         if expiration_in_seconds is not None:
             payload["expiration_in_seconds"] = expiration_in_seconds
@@ -296,7 +323,7 @@ class SignalAPI:
             payload["name"] = name
 
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(headers=headers) as session:
                 resp = await session.put(uri, json=payload)
                 resp.raise_for_status()
                 return resp
@@ -316,6 +343,7 @@ class SignalAPI:
     ) -> None:
         uri = self._signal_api_uris.group_id_uri(group_id)
         payload = {}
+        headers = self._add_auth()
 
         if base64_avatar is not None:
             payload["base64_avatar"] = base64_avatar
@@ -330,7 +358,7 @@ class SignalAPI:
             payload["name"] = name
 
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(headers=headers) as session:
                 resp = await session.put(uri, json=payload)
                 resp.raise_for_status()
                 return resp
@@ -342,8 +370,10 @@ class SignalAPI:
 
     async def health_check(self) -> aiohttp.ClientResponse:
         uri = self._signal_api_uris.health_check_uri()
+        headers = self._add_auth()
+
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(headers=headers) as session:
                 resp = await session.get(uri)
                 resp.raise_for_status()
                 return resp
@@ -373,8 +403,10 @@ class SignalAPI:
 
     async def get_signal_cli_about(self) -> dict[str, Any]:
         uri = self._signal_api_uris.about_rest_uri()
+        headers = self._add_auth()
+
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(headers=headers) as session:
                 resp = await session.get(uri)
                 resp.raise_for_status()
                 return await resp.json()
@@ -398,8 +430,10 @@ class SignalAPI:
             "recipient": receiver,
             "timestamp": timestamp,
         }
+        headers = self._add_auth()
+
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(headers=headers) as session:
                 resp = await session.delete(uri, json=payload)
                 resp.raise_for_status()
                 return resp
@@ -408,6 +442,13 @@ class SignalAPI:
             aiohttp.http_exceptions.HttpProcessingError,
         ) as exc:
             raise RemoteDeleteError from exc
+
+    def _add_auth(self, headers: dict[str, str] | None = None) -> dict[str]:
+        if headers is None:
+            headers = {}
+        if self.auth is not None:
+            self.auth.write_header(headers)
+        return headers
 
 
 class SignalAPIURIs:
