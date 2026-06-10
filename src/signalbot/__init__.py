@@ -6,14 +6,20 @@ from signalbot.api import (
     SendMessageError,
     SignalAPI,
 )
-from signalbot.auth import BasicAuthentication, BearerAuthentication
 from signalbot.bot import (
     LOGGER_NAME,
     MIN_SIGNAL_CLI_REST_API_VERSION,
     SignalBot,
     enable_console_logging,
 )
-from signalbot.bot_config import Config, InMemoryConfig, RedisConfig, SQLiteConfig
+from signalbot.bot_config import (
+    BasicAuth,
+    BearerAuth,
+    Config,
+    InMemoryConfig,
+    RedisConfig,
+    SQLiteConfig,
+)
 from signalbot.command import (
     Command,
     CommandError,
@@ -29,8 +35,8 @@ from signalbot.reaction import Reaction
 __all__ = [
     "LOGGER_NAME",
     "MIN_SIGNAL_CLI_REST_API_VERSION",
-    "BasicAuthentication",
-    "BearerAuthentication",
+    "BasicAuth",
+    "BearerAuth",
     "Command",
     "CommandError",
     "Config",
