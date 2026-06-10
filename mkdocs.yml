@@ -23,6 +23,7 @@ nav:
       - Command: reference/command.md
       - Quote: reference/quote.md
       - Reaction: reference/reaction.md
+      - Authentication: reference/auth.md
   - Troubleshooting: troubleshooting.md
   - Contributing: local_development.md
 
