@@ -117,6 +117,10 @@ class SignalBot:
         elif isinstance(self.config.auth, BearerAuth):
             auth = BearerAuthentication(self.config.auth.token)
         else:
+            if self.config.auth is not None:
+                error_msg = f"Unsupported auth type '{self.config.auth}', "
+                error_msg += "no authentication will be used."
+                self._logger.warning(error_msg)
             auth = None
 
         self._commands_to_be_registered: CommandList = []  # populated by .register()
