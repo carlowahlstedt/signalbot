@@ -1,21 +1,34 @@
 from __future__ import annotations
 
 import base64
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
 
-from pydantic import BaseModel
 
+class Authentication(ABC):
+    """
+    Base class for authentication methods.
+    """
 
-class Authentication(BaseModel):
     @property
+    @abstractmethod
     def header(self) -> str:
-        raise NotImplementedError
+        """The authorization header value."""
 
     def write_header(self, headers: dict[str, str]) -> None:
+        """Adds the authorization header to the given headers.
+
+        Args:
+            headers: The dictionary to which the authorization header will be added.
+        """
         headers["Authorization"] = self.header
 
 
+@dataclass
 class BasicAuthentication(Authentication):
     """
+    Username and password based authentication.
+
     Attributes:
         username: The username for the authentication.
         password: The password used for authentication.
@@ -31,8 +44,11 @@ class BasicAuthentication(Authentication):
         return f"Basic {credential_string}"
 
 
+@dataclass
 class BearerAuthentication(Authentication):
     """
+    Token based authentication.
+
     Attributes:
         token: The token used for authentication.
     """

@@ -122,13 +122,32 @@ storage:
 
 Enables usage of an auth-enabled `signal-cli-rest-api` instance (behind a proxy).
 
+### User and password
+Username and password based authentication using the [BasicAuth][signalbot.BasicAuth] class.
+
 ```python
-from signalbot import SignalBot, Config, ConnectionMode, BasicAuthentication
+from signalbot import BasicAuth, Config, ConnectionMode, SignalBot
 
 config = Config(
     signal_service="http://localhost:8080",
     phone_number="+1234567890",
-    auth=BasicAuthentication(username="user", password="password"),
+    auth=BasicAuth(username="user", password="password"),
+)
+
+bot = SignalBot(config)
+bot.start()
+```
+
+### Token
+Token based authentication using the [BearerAuth][signalbot.BearerAuth] class.
+
+```python
+from signalbot import BearerAuth, Config, ConnectionMode, SignalBot
+
+config = Config(
+    signal_service="http://localhost:8080",
+    phone_number="+1234567890",
+    auth=BearerAuth(token="token")
 )
 
 bot = SignalBot(config)
