@@ -6,6 +6,7 @@ from signalbot.api import (
     SendMessageError,
     SignalAPI,
 )
+from signalbot.auth import BasicAuthentication, BearerAuthentication
 from signalbot.bot import (
     LOGGER_NAME,
     MIN_SIGNAL_CLI_REST_API_VERSION,
@@ -28,6 +29,8 @@ from signalbot.reaction import Reaction
 __all__ = [
     "LOGGER_NAME",
     "MIN_SIGNAL_CLI_REST_API_VERSION",
+    "BasicAuthentication",
+    "BearerAuthentication",
     "Command",
     "CommandError",
     "Config",
