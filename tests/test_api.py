@@ -74,6 +74,35 @@ class TestAPI:
         for i, _ in enumerate(results):
             assert messages[i] == results[i]
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("init_kwargs", "expected_ping_interval", "expected_ping_timeout"),
+        [
+            ({}, 20, 20),  # keepalive enabled by default
+            ({"ping_interval": 5, "ping_timeout": 10}, 5, 10),
+            ({"ping_interval": None, "ping_timeout": None}, None, None),
+        ],
+    )
+    async def test_receive_keepalive(
+        self,
+        mocker: MockerFixture,
+        init_kwargs: dict,
+        expected_ping_interval: float | None,
+        expected_ping_timeout: float | None,
+    ):
+        signal_api = SignalAPI(self.signal_service, self.phone_number, **init_kwargs)
+
+        mock_iterator = mocker.AsyncMock()
+        mock_iterator.__aiter__.return_value = []
+        mock = mocker.patch("websockets.connect")
+        mock.return_value.__aenter__.return_value = mock_iterator
+
+        _ = [raw_message async for raw_message in signal_api.receive()]
+
+        _, kwargs = mock.call_args
+        assert kwargs["ping_interval"] == expected_ping_interval
+        assert kwargs["ping_timeout"] == expected_ping_timeout
+
     def test_receive_uri(self):
         expected_uri = f"wss://{self.signal_service}/v1/receive/{self.phone_number}"
         actual_uri = self.signal_api._signal_api_uris.receive_ws_uri()
